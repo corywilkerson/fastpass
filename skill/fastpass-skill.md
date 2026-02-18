@@ -22,13 +22,13 @@ You are helping the user set up Cloudflare Access on their domain using the `fas
 ### Interactive mode
 Run the wizard and let the user answer prompts:
 ```bash
-npx fastpass
+npx fastpass-cli
 ```
 
 ### One-liner mode
 If the user has already told you the domain, auth method, and who should have access:
 ```bash
-npx fastpass protect <domain> --auth <email|github|google> --allow "<rule>"
+npx fastpass-cli protect <domain> --auth <email|github|google> --allow "<rule>"
 ```
 
 Allow rules:
@@ -39,22 +39,22 @@ Allow rules:
 
 ### List protected domains
 ```bash
-npx fastpass list
+npx fastpass-cli list
 ```
 
 ### Remove protection
 ```bash
-npx fastpass remove <domain>
+npx fastpass-cli remove <domain>
 ```
 
 ### Status dashboard
 ```bash
-npx fastpass status
+npx fastpass-cli status
 ```
 
 ### View recent access logs
 ```bash
-npx fastpass logs [domain] --limit 25 --since 2025-01-15
+npx fastpass-cli logs [domain] --limit 25 --since 2025-01-15
 ```
 
 Options:
@@ -64,7 +64,7 @@ Options:
 
 ### Inspect app configuration
 ```bash
-npx fastpass inspect [domain]
+npx fastpass-cli inspect [domain]
 ```
 
 If no domain is provided, shows an interactive picker. Displays: domain, type, session duration, allowed identity providers (resolved to names), and policy rules translated to plain English.
@@ -87,6 +87,6 @@ When the user asks to protect a domain, gather these three things:
 2. **Auth method** — email (easiest), github, or google
 3. **Access rule** — who should be allowed in
 
-Then construct and run the appropriate `npx fastpass` command.
+Then construct and run the appropriate `npx fastpass-cli` command.
 
 If the user is unsure, recommend **email** auth — it requires zero external setup.

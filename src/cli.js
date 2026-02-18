@@ -14,7 +14,7 @@ export function run() {
 
   program
     .name('fastpass')
-    .description('Cloudflare Access in 60 seconds. No enterprise jargon.')
+    .description('Cloudflare Access in 60 seconds.')
     .version('0.1.0');
 
   // Default action (no subcommand) — run the protect wizard

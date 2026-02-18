@@ -1,6 +1,6 @@
 # fastpass
 
-Cloudflare Access in 60 seconds. No enterprise jargon.
+Cloudflare Access in 60 seconds.
 
 ## What you want → What it does
 
@@ -16,7 +16,7 @@ Cloudflare Access in 60 seconds. No enterprise jargon.
 ## Quickstart
 
 ```sh
-npx fastpass
+npx fastpass-cli
 ```
 
 That's it. The interactive wizard walks you through everything.
@@ -25,40 +25,40 @@ That's it. The interactive wizard walks you through everything.
 
 ```sh
 # Protect with email login (zero config)
-npx fastpass protect staging.myapp.com --auth email --allow "me@gmail.com"
+npx fastpass-cli protect staging.myapp.com --auth email --allow "me@gmail.com"
 
 # Protect with GitHub login, allow anyone at your company
-npx fastpass protect staging.myapp.com --auth github --allow "*@company.com"
+npx fastpass-cli protect staging.myapp.com --auth github --allow "*@company.com"
 
 # Protect with GitHub login, restrict to a GitHub org
-npx fastpass protect staging.myapp.com --auth github --allow "org:my-github-org"
+npx fastpass-cli protect staging.myapp.com --auth github --allow "org:my-github-org"
 
 # Protect with Google login, allow everyone (just require login)
-npx fastpass protect admin.myapp.com --auth google --allow "everyone"
+npx fastpass-cli protect admin.myapp.com --auth google --allow "everyone"
 
 # List protected domains
-npx fastpass list
+npx fastpass-cli list
 
 # Remove protection
-npx fastpass remove staging.myapp.com
+npx fastpass-cli remove staging.myapp.com
 
 # Overview dashboard — team, apps, IdPs, recent activity
-npx fastpass status
+npx fastpass-cli status
 
 # Recent access events (last 25)
-npx fastpass logs
+npx fastpass-cli logs
 
 # Filter events to one domain, last 10
-npx fastpass logs staging.myapp.com --limit 10
+npx fastpass-cli logs staging.myapp.com --limit 10
 
 # Events since a specific date
-npx fastpass logs --since 2025-01-15
+npx fastpass-cli logs --since 2025-01-15
 
 # Detailed config for a specific app
-npx fastpass inspect staging.myapp.com
+npx fastpass-cli inspect staging.myapp.com
 
 # Interactive app picker
-npx fastpass inspect
+npx fastpass-cli inspect
 ```
 
 ## Prerequisites
@@ -98,7 +98,7 @@ If you already use wrangler:
 
 ```sh
 npx wrangler login
-npx fastpass
+npx fastpass-cli
 ```
 
 > **Note:** Wrangler's default OAuth token does not include Access scopes. If you use `wrangler login` for deploying Workers but get permission errors from fastpass, you'll need a dedicated API token (Option A). The wrangler OAuth scopes cover Workers, KV, D1, Pages, etc. — but not Cloudflare Access.
@@ -128,7 +128,7 @@ Under the hood, fastpass calls the Cloudflare API to:
 3. **Create an Access Application** on your domain with an allow policy
 4. Your domain now shows a login page before granting access
 
-All of this maps to Cloudflare's [Zero Trust Access](https://developers.cloudflare.com/cloudflare-one/policies/access/) product — fastpass just removes the jargon and manual steps.
+All of this maps to Cloudflare's [Zero Trust Access](https://developers.cloudflare.com/cloudflare-one/policies/access/) product — fastpass just removes the complexity.
 
 ## FAQ
 
@@ -142,7 +142,7 @@ Run `protect` again on the same domain with a different `--auth` flag, or config
 fastpass detects existing identity providers and reuses them.
 
 **How do I see what's going on?**
-Run `npx fastpass status` for an overview, `npx fastpass logs` for recent events, or `npx fastpass inspect <domain>` for detailed app config.
+Run `npx fastpass-cli status` for an overview, `npx fastpass-cli logs` for recent events, or `npx fastpass-cli inspect <domain>` for detailed app config.
 
 **How do I manage users/policies after setup?**
 Use the [Cloudflare Zero Trust dashboard](https://one.dash.cloudflare.com).
