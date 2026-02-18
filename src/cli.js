@@ -13,7 +13,7 @@ export function run() {
   const program = new Command();
 
   program
-    .name('fastpass')
+    .name('fastpass-cli')
     .description('Cloudflare Access in 60 seconds.')
     .version('0.1.0');
 
