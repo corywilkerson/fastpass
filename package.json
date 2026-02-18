@@ -1,0 +1,41 @@
+{
+  "name": "fastpass-cli",
+  "version": "0.1.0",
+  "description": "Cloudflare Access in 60 seconds. No enterprise jargon.",
+  "type": "module",
+  "bin": {
+    "fastpass": "./bin/fastpass.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "skill/"
+  ],
+  "keywords": [
+    "cloudflare",
+    "access",
+    "auth",
+    "login",
+    "zero-trust",
+    "cli"
+  ],
+  "author": "Cory Wilkerson",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/corywilkerson/fastpass.git"
+  },
+  "homepage": "https://github.com/corywilkerson/fastpass#readme",
+  "bugs": {
+    "url": "https://github.com/corywilkerson/fastpass/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^7.0.0",
+    "commander": "^13.0.0",
+    "open": "^10.0.0",
+    "picocolors": "^1.1.0"
+  }
+}
