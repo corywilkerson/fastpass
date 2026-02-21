@@ -17,6 +17,7 @@ vi.mock('ora', () => ({
 
 vi.mock('@inquirer/prompts', () => ({
   input: vi.fn(),
+  password: vi.fn(),
   select: vi.fn(),
   confirm: vi.fn(),
 }));

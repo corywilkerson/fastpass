@@ -27,6 +27,7 @@ export function run() {
     .description('Protect a domain with Cloudflare Access')
     .option('--auth <method>', 'Auth method(s): email, github, google (comma-separated for multiple)')
     .option('--allow <rule>', 'Who can access: email, *@domain.com, or "everyone"')
+    .option('--hidden', 'Hide email addresses from terminal output')
     .action(async (domain, opts) => {
       printBanner();
       const creds = await getCredentials();

@@ -1,6 +1,6 @@
 {
   "name": "fastpass-cli",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Cloudflare Access in 60 seconds.",
   "type": "module",
   "bin": {

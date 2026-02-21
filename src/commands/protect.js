@@ -1,5 +1,5 @@
 import pc from 'picocolors';
-import { input, select, confirm } from '@inquirer/prompts';
+import { input, password, select, confirm } from '@inquirer/prompts';
 import { getTeamName } from '../auth.js';
 import { ensureEmailOtp } from '../idp/email-otp.js';
 import { ensureGitHub } from '../idp/github.js';
@@ -61,7 +61,7 @@ export async function protect(api, opts = {}) {
     console.log('');
 
     // Resolve who gets access
-    const { include, includeType } = await resolveAccess(opts.allow);
+    const { include, includeType } = await resolveAccess(opts.allow, opts.hidden);
     console.log('');
 
     // Get team name for OAuth callback URLs
@@ -84,7 +84,9 @@ export async function protect(api, opts = {}) {
     const policyInclude = buildIncludeRules(include, includeType);
 
     // Describe access for the summary
-    const accessLabel = describeAccess(include, includeType);
+    const accessLabel = (opts.hidden && includeType === 'emails')
+      ? pc.dim('(hidden)')
+      : describeAccess(include, includeType);
 
     // Show confirmation summary (skip when all CLI flags provided)
     const allFlagsProvided = opts.domain && opts.auth && opts.allow;
@@ -171,7 +173,7 @@ export async function validateDomain(api, domain) {
   }
 }
 
-export async function resolveAccess(allowFlag) {
+export async function resolveAccess(allowFlag, hidden) {
   // If --allow flag was passed, parse it
   if (allowFlag) {
     if (allowFlag.startsWith('*@')) {
@@ -187,6 +189,8 @@ export async function resolveAccess(allowFlag) {
     return { include: allowFlag.split(',').map((e) => e.trim()), includeType: 'emails' };
   }
 
+  const emailPrompt = hidden ? password : input;
+
   // Interactive
   const accessType = await select({
     message: 'Who should have access?',
@@ -195,7 +199,7 @@ export async function resolveAccess(allowFlag) {
 
   switch (accessType) {
     case 'me': {
-      const email = await input({
+      const email = await emailPrompt({
         message: 'Your email address:',
         validate: (v) => v.includes('@') || 'Enter a valid email',
       });
@@ -216,7 +220,7 @@ export async function resolveAccess(allowFlag) {
       return { include: [org.trim()], includeType: 'github_org' };
     }
     case 'emails': {
-      const emails = await input({
+      const emails = await emailPrompt({
         message: 'Email addresses (comma-separated):',
         validate: (v) => v.includes('@') || 'Enter at least one email',
       });
