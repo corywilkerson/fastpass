@@ -39,8 +39,8 @@ export async function protect(api, opts = {}) {
     const existing = await checkExistingApp(api, domain.trim());
     if (existing) {
       console.log(`\n  ${pc.yellow('This domain is already protected by Access.')}\n`);
-      console.log(`  Run ${pc.cyan(`fastpass inspect ${domain.trim()}`)} to view its configuration.`);
-      console.log(`  Run ${pc.cyan(`fastpass remove ${domain.trim()}`)} to remove it first.\n`);
+      console.log(`  Run ${pc.cyan(`fastpass-cli inspect ${domain.trim()}`)} to view its configuration.`);
+      console.log(`  Run ${pc.cyan(`fastpass-cli remove ${domain.trim()}`)} to remove it first.\n`);
       return;
     }
 
@@ -135,8 +135,8 @@ export async function protect(api, opts = {}) {
       s.fail(`Failed to create Access application for ${pc.bold(domain.trim())}`);
       if (err instanceof ApiError && err.message.includes('application_already_exists')) {
         console.log(`\n  ${pc.yellow('This domain is already protected by Access.')}\n`);
-        console.log(`  Run ${pc.cyan(`fastpass inspect ${domain.trim()}`)} to view its configuration.`);
-        console.log(`  Run ${pc.cyan(`fastpass remove ${domain.trim()}`)} to remove it first.\n`);
+        console.log(`  Run ${pc.cyan(`fastpass-cli inspect ${domain.trim()}`)} to view its configuration.`);
+        console.log(`  Run ${pc.cyan(`fastpass-cli remove ${domain.trim()}`)} to remove it first.\n`);
         return;
       }
       throw err;

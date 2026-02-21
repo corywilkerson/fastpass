@@ -14,7 +14,7 @@ export async function list(api) {
 
     if (!result?.length) {
       console.log(pc.dim('\n  No Access applications found.\n'));
-      console.log(`  Run ${pc.cyan('fastpass protect <domain>')} to get started.\n`);
+      console.log(`  Run ${pc.cyan('fastpass-cli protect <domain>')} to get started.\n`);
       return;
     }
 

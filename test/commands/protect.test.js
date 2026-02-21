@@ -254,8 +254,8 @@ describe('protect() full flow', () => {
 
     const output = consoleSpy.log.mock.calls.map((c) => c[0]).join('\n');
     expect(output).toContain('already protected');
-    expect(output).toContain('fastpass inspect');
-    expect(output).toContain('fastpass remove');
+    expect(output).toContain('fastpass-cli inspect');
+    expect(output).toContain('fastpass-cli remove');
   });
 
   it('handles application_already_exists race condition on POST', async () => {
@@ -284,8 +284,8 @@ describe('protect() full flow', () => {
 
     const output = consoleSpy.log.mock.calls.map((c) => c[0]).join('\n');
     expect(output).toContain('already protected');
-    expect(output).toContain('fastpass inspect');
-    expect(output).toContain('fastpass remove');
+    expect(output).toContain('fastpass-cli inspect');
+    expect(output).toContain('fastpass-cli remove');
   });
 
   it('shows confirmation in interactive mode (not all flags)', async () => {

@@ -87,6 +87,6 @@ export function run() {
 
 function printBanner() {
   console.log('');
-  console.log(`  ${pc.bold('fastpass')}: protect your app in 60 seconds`);
+  console.log(`  ${pc.bold('fastpass-cli')}: protect your app in 60 seconds`);
   console.log('');
 }
