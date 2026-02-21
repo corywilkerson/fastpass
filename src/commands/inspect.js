@@ -90,7 +90,7 @@ export async function inspect(api, opts = {}) {
   }
 }
 
-function describeRule(rule) {
+export function describeRule(rule) {
   if (rule.email?.email) {
     return rule.email.email;
   }

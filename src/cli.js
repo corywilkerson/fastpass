@@ -21,7 +21,7 @@ export function run() {
   program
     .command('protect [domain]', { isDefault: true })
     .description('Protect a domain with Cloudflare Access')
-    .option('--auth <method>', 'Auth method: email, github, or google')
+    .option('--auth <method>', 'Auth method(s): email, github, google (comma-separated for multiple)')
     .option('--allow <rule>', 'Who can access: email, *@domain.com, or "everyone"')
     .action(async (domain, opts) => {
       printBanner();

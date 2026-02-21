@@ -1,148 +1,150 @@
 # fastpass
 
-Cloudflare Access in 60 seconds.
+A CLI for rapdily configuring [Cloudflare Access](https://www.cloudflare.com/products/zero-trust/access/) — add authentication to internal apps without touching your application code. Creates Access Applications, Identity Providers, and policies via the Cloudflare API.
 
-## What you want → What it does
+**Requirements:** Node 18+, Cloudflare account with the domain on your account, Cloudflare Zero Trust (Access) enabled.
 
-| You want...                        | Cloudflare calls it...         | fastpass handles it |
-|------------------------------------|--------------------------------|----------------------|
-| A login page on my app             | Self-hosted Access Application | `protect`            |
-| GitHub/Google login                | Identity Provider (IdP)        | `--auth github`      |
-| "Only my team can access this"     | Access Policy (Allow rule)     | `--allow`            |
-| "Only my GitHub org"               | GitHub Organization rule       | `--allow "org:name"` |
-| Email-based login, no passwords    | One-Time PIN (OTP)             | `--auth email`       |
-| The wall that checks your identity | Cloudflare Access              | all of it            |
-
-## Quickstart
+## Installation
 
 ```sh
 npx fastpass-cli
 ```
 
-That's it. The interactive wizard walks you through everything.
+No global install. Use `npx` to run the latest version.
 
-## One-liners
+## Quick start
 
 ```sh
-# Protect with email login (zero config)
-npx fastpass-cli protect staging.myapp.com --auth email --allow "me@gmail.com"
+# Interactive wizard (prompts for domain, auth method, and access rules)
+npx fastpass-cli
 
-# Protect with GitHub login, allow anyone at your company
-npx fastpass-cli protect staging.myapp.com --auth github --allow "*@company.com"
-
-# Protect with GitHub login, restrict to a GitHub org
-npx fastpass-cli protect staging.myapp.com --auth github --allow "org:my-github-org"
-
-# Protect with Google login, allow everyone (just require login)
-npx fastpass-cli protect admin.myapp.com --auth google --allow "everyone"
-
-# List protected domains
-npx fastpass-cli list
-
-# Remove protection
-npx fastpass-cli remove staging.myapp.com
-
-# Overview dashboard — team, apps, IdPs, recent activity
-npx fastpass-cli status
-
-# Recent access events (last 25)
-npx fastpass-cli logs
-
-# Filter events to one domain, last 10
-npx fastpass-cli logs staging.myapp.com --limit 10
-
-# Events since a specific date
-npx fastpass-cli logs --since 2025-01-15
-
-# Detailed config for a specific app
-npx fastpass-cli inspect staging.myapp.com
-
-# Interactive app picker
-npx fastpass-cli inspect
+# Or one-liner
+npx fastpass-cli protect staging.myapp.com --auth email --allow "me@example.com"
 ```
 
-## Prerequisites
+## Commands
 
-### 1. Enable Cloudflare Access (one-time)
+| Command | Description |
+|---------|-------------|
+| `protect [domain]` | Create an Access Application. Default command when no subcommand is given. |
+| `list` | List all protected domains (self-hosted Access apps). |
+| `remove [domain]` | Delete Access protection from a domain. |
+| `status` | Overview of team, apps, IdPs, and recent access activity. |
+| `logs [domain]` | Recent access events (default: last 25). |
+| `inspect [domain]` | Detailed configuration for an Access Application. |
 
-Before fastpass can do anything, Access needs to be turned on for your account:
+## Protect options
 
-1. Go to [https://one.dash.cloudflare.com](https://one.dash.cloudflare.com) (Zero Trust dashboard)
-2. You'll be prompted to select the **Free** plan ($0) — confirm it
-3. Pick a **team name** (e.g. `myteam`) — this becomes `myteam.cloudflareaccess.com`, the login domain for all your protected apps
+```
+protect [domain] [options]
 
-This only needs to happen once per account.
+Options:
+  --auth <method>   email | github | google (comma-separated for multiple)
+  --allow <rule>    Access rule (see below)
+```
 
-### 2. API credentials
+### `--allow` rule syntax
 
-You need a Cloudflare API token. Pick one:
+| Rule | Meaning | Example |
+|------|---------|---------|
+| Email address(es) | Specific users (comma-separated) | `me@example.com` or `a@b.com,b@b.com` |
+| `*@domain.com` | Anyone with that email domain | `*@company.com` |
+| `org:name` | Members of a GitHub organization | `org:my-org` |
+| `everyone` | Any authenticated user | `everyone` |
 
-### Option A: API Token (recommended)
+### Auth methods
 
-1. Go to https://dash.cloudflare.com/profile/api-tokens
-2. Create a token with these permissions:
-   - **Access: Organizations, Identity Providers, and Groups** — Edit
-   - **Access: Apps and Policies** — Edit
-   - **Zone: Zone** — Read
-3. Set the env var:
+- **email** — One-time PIN (OTP) sent to email. No external setup; built into Cloudflare.
+- **github** — OAuth. You create an app at [GitHub Developer Settings](https://github.com/settings/developers) and provide Client ID + Secret when prompted.
+- **google** — OAuth. Same flow via Google Cloud Console.
+
+## Credentials
+
+fastpass needs Cloudflare API access. It checks, in order:
+
+1. `CLOUDFLARE_API_TOKEN` environment variable
+2. Wrangler OAuth token from `~/.wrangler/config/default.toml` (from `npx wrangler login`)
+
+**Recommended:** Use an API token with:
+
+- **Access: Organizations, Identity Providers, and Groups** — Edit
+- **Access: Apps and Policies** — Edit
+- **Zone: Zone** — Read (for domain validation)
+
+Create tokens at [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens).
 
 ```sh
 export CLOUDFLARE_API_TOKEN="your-token"
+
+# Optional, if you have multiple accounts:
+export CLOUDFLARE_ACCOUNT_ID="your-account-id"
 ```
 
-Optionally set `CLOUDFLARE_ACCOUNT_ID` if you have multiple accounts.
+**Note:** Wrangler’s OAuth token typically does not include Access scopes. If `wrangler login` works for Workers but fastpass fails with permission errors, use a dedicated API token with the permissions above.
 
-### Option B: Wrangler login
+**Logs:** The `logs` and `status` commands fetch access events. If they fail, your token may need **Access: Audit Logs** — Read.
 
-If you already use wrangler:
+## Prerequisites
+
+1. **Cloudflare Access enabled** — In [Zero Trust](https://one.dash.cloudflare.com), select the Free plan and set a team name (e.g. `myteam` → `myteam.cloudflareaccess.com`). This is a one-time setup per account.
+
+2. **Domain in Cloudflare** — The domain you protect must exist as a zone in your Cloudflare account. fastpass validates this before creating the Access Application.
+
+## Example usage
 
 ```sh
-npx wrangler login
-npx fastpass-cli
+# Email OTP, only you
+npx fastpass-cli protect staging.myapp.com --auth email --allow "me@gmail.com"
+
+# GitHub, anyone at your company
+npx fastpass-cli protect staging.myapp.com --auth github --allow "*@company.com"
+
+# GitHub, restrict to a specific org
+npx fastpass-cli protect staging.myapp.com --auth github --allow "org:my-github-org"
+
+# Google, any logged-in user
+npx fastpass-cli protect admin.myapp.com --auth google --allow "everyone"
+
+# Multiple login methods (email + GitHub), shows Cloudflare's provider picker
+npx fastpass-cli protect staging.myapp.com --auth email,github --allow "*@company.com"
+
+# List apps, view status, inspect config
+npx fastpass-cli list
+npx fastpass-cli status
+npx fastpass-cli inspect staging.myapp.com
+
+# Logs
+npx fastpass-cli logs
+npx fastpass-cli logs staging.myapp.com --limit 10
+npx fastpass-cli logs --since 2025-01-15
+
+# Remove protection
+npx fastpass-cli remove staging.myapp.com
 ```
-
-> **Note:** Wrangler's default OAuth token does not include Access scopes. If you use `wrangler login` for deploying Workers but get permission errors from fastpass, you'll need a dedicated API token (Option A). The wrangler OAuth scopes cover Workers, KV, D1, Pages, etc. — but not Cloudflare Access.
-
-## Auth methods
-
-### Email code (OTP)
-
-The easiest option. No external setup required. Users get a one-time code sent to their email.
-
-### GitHub
-
-fastpass walks you through creating a GitHub OAuth app. You'll need to:
-1. Create an OAuth app at https://github.com/settings/developers
-2. Paste the Client ID and Secret when prompted
-
-### Google
-
-Same as GitHub — fastpass guides you through the Google Cloud Console OAuth setup.
 
 ## How it works
 
-Under the hood, fastpass calls the Cloudflare API to:
+fastpass calls the Cloudflare API to:
 
-1. **Validate** your domain exists in your CF account
-2. **Create an Identity Provider** (email OTP, GitHub, or Google OAuth)
-3. **Create an Access Application** on your domain with an allow policy
-4. Your domain now shows a login page before granting access
+1. Check that the domain exists in your account (zone lookup).
+2. Create or reuse an Identity Provider (email OTP, GitHub, or Google).
+3. Create an Access Application (self-hosted) with an allow policy.
+4. Visitors hit your domain and see Cloudflare’s login page before access.
 
-All of this maps to Cloudflare's [Zero Trust Access](https://developers.cloudflare.com/cloudflare-one/policies/access/) product — fastpass just removes the complexity.
+All of this maps to Cloudflare Zero Trust Access. fastpass automates the setup; advanced configuration is done in the [Zero Trust dashboard](https://one.dash.cloudflare.com).
 
 ## FAQ
 
-**Does this cost money?**
-Cloudflare Access is free for up to 50 users.
+**Cost?** Cloudflare Access is free for up to 50 users.
 
-**Can I use multiple auth methods?**
-Run `protect` again on the same domain with a different `--auth` flag, or configure additional IdPs in the CF dashboard.
+**Existing IdPs?** fastpass reuses Identity Providers already configured in your account (e.g. Email Login, GitHub, Google).
 
-**What if I already have Access set up?**
-fastpass detects existing identity providers and reuses them.
+**Existing Access setup?** If you already have Access apps and IdPs, fastpass will use them where applicable. It does not modify existing apps; `protect` creates new ones.
 
-**How do I see what's going on?**
-Run `npx fastpass-cli status` for an overview, `npx fastpass-cli logs` for recent events, or `npx fastpass-cli inspect <domain>` for detailed app config.
+**Multiple auth methods per app?** Use `--auth email,github` to wire multiple IdPs in one command. When multiple methods are set, visitors see Cloudflare's provider picker instead of auto-redirecting.
 
-**How do I manage users/policies after setup?**
-Use the [Cloudflare Zero Trust dashboard](https://one.dash.cloudflare.com).
+**Need to change policies or users?** Use the [Zero Trust dashboard](https://one.dash.cloudflare.com).
+
+## License
+
+MIT

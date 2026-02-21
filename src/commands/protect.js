@@ -34,14 +34,19 @@ export async function protect(api, opts = {}) {
     // Validate domain exists in CF
     await withSpinner('Verifying domain...', () => validateDomain(api, domain.trim()));
 
-    const authMethod = opts.auth || await select({
-      message: 'How should people log in?',
-      choices: Object.entries(AUTH_CHOICES).map(([value, { label }]) => ({ value, name: label })),
-    });
+    // Parse auth methods: comma-separated string from CLI, or single interactive choice
+    const authMethods = opts.auth
+      ? opts.auth.split(',').map((m) => m.trim())
+      : [await select({
+          message: 'How should people log in?',
+          choices: Object.entries(AUTH_CHOICES).map(([value, { label }]) => ({ value, name: label })),
+        })];
 
-    if (!AUTH_CHOICES[authMethod]) {
-      console.error(pc.red(`Unknown auth method: ${authMethod}. Use: email, github, or google`));
-      process.exit(1);
+    for (const method of authMethods) {
+      if (!AUTH_CHOICES[method]) {
+        console.error(pc.red(`Unknown auth method: ${method}. Use: email, github, or google`));
+        process.exit(1);
+      }
     }
 
     // Resolve who gets access
@@ -49,15 +54,19 @@ export async function protect(api, opts = {}) {
 
     // Get team name for OAuth callback URLs
     const teamName = await withSpinner('Fetching team info', () => getTeamName(api));
-    if (!teamName && authMethod !== 'email') {
+    if (!teamName && authMethods.some((m) => m !== 'email')) {
       console.error(pc.red('Could not determine your Access team name.'));
       console.error('Make sure Access is enabled in your Cloudflare dashboard.\n');
       process.exit(1);
     }
 
-    // Set up the identity provider
+    // Set up identity providers
     console.log('');
-    const idp = await AUTH_CHOICES[authMethod].setup(api, teamName);
+    const idpResults = [];
+    for (const method of authMethods) {
+      const idp = await AUTH_CHOICES[method].setup(api, teamName);
+      idpResults.push(idp);
+    }
 
     // Build the policy include rules
     const policyInclude = buildIncludeRules(include, includeType);
@@ -70,8 +79,8 @@ export async function protect(api, opts = {}) {
       domain: domain.trim(),
       type: 'self_hosted',
       session_duration: '24h',
-      allowed_idps: [idp.id],
-      auto_redirect_to_identity: true,
+      allowed_idps: idpResults.map((idp) => idp.id),
+      auto_redirect_to_identity: idpResults.length === 1,
       policies: [
         {
           name: `Allow — ${domain.trim()}`,
@@ -97,7 +106,7 @@ export async function protect(api, opts = {}) {
   }
 }
 
-async function validateDomain(api, domain) {
+export async function validateDomain(api, domain) {
   // Extract the root domain for zone lookup
   const parts = domain.split('.');
   const rootDomain = parts.slice(-2).join('.');
@@ -115,7 +124,7 @@ async function validateDomain(api, domain) {
   }
 }
 
-async function resolveAccess(allowFlag) {
+export async function resolveAccess(allowFlag) {
   // If --allow flag was passed, parse it
   if (allowFlag) {
     if (allowFlag.startsWith('*@')) {
@@ -173,7 +182,7 @@ async function resolveAccess(allowFlag) {
   }
 }
 
-function buildIncludeRules(include, includeType) {
+export function buildIncludeRules(include, includeType) {
   switch (includeType) {
     case 'emails':
       // CF API expects one rule per email: [{ email: { email: "a@b.com" } }, ...]

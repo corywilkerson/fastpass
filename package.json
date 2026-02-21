@@ -29,6 +29,11 @@
   "bugs": {
     "url": "https://github.com/corywilkerson/fastpass/issues"
   },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
   "engines": {
     "node": ">=18"
   },
@@ -38,5 +43,9 @@
     "open": "^10.0.0",
     "ora": "^9.3.0",
     "picocolors": "^1.1.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.18",
+    "vitest": "^4.0.18"
   }
 }
