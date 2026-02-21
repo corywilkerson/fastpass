@@ -1,36 +1,21 @@
-import { readFile } from 'node:fs/promises';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 import pc from 'picocolors';
 import { spin } from './ui.js';
 
 /**
  * Resolve Cloudflare credentials.
  *
- * Priority:
- *  1. CLOUDFLARE_API_TOKEN env var
- *  2. Wrangler OAuth token from ~/.wrangler/config/default.toml
- *
- * Account ID:
- *  1. CLOUDFLARE_ACCOUNT_ID env var
- *  2. Fetched from /accounts API
+ * Token:    CLOUDFLARE_API_TOKEN env var
+ * Account:  CLOUDFLARE_ACCOUNT_ID env var, or fetched from /accounts API
  */
 export async function getCredentials() {
   const s = spin('Checking Cloudflare credentials');
 
-  let token = process.env.CLOUDFLARE_API_TOKEN;
-
-  if (!token) {
-    s.text = 'Checking Cloudflare credentials (trying wrangler)';
-    token = await tryWranglerToken();
-  }
+  const token = process.env.CLOUDFLARE_API_TOKEN;
 
   if (!token) {
     s.fail('No Cloudflare credentials found');
     console.error('');
-    console.error(`  ${pc.bold('How to fix — pick one:')}`);
-    console.error('');
-    console.error(`  ${pc.cyan('1.')} Set an API token (recommended):`);
+    console.error(`  ${pc.bold('Set an API token:')}`);
     console.error('');
     console.error(`     ${pc.bold('export CLOUDFLARE_API_TOKEN=<your-token>')}`);
     console.error('');
@@ -38,10 +23,6 @@ export async function getCredentials() {
     console.error('     Required permissions:');
     console.error(`       ${pc.dim('•')} Access: Organizations, Identity Providers, and Groups — Edit`);
     console.error(`       ${pc.dim('•')} Access: Apps and Policies — Edit`);
-    console.error('');
-    console.error(`  ${pc.cyan('2.')} Log in with wrangler:`);
-    console.error('');
-    console.error(`     ${pc.bold('npx wrangler login')}`);
     console.error('');
     process.exit(1);
   }
@@ -55,25 +36,6 @@ export async function getCredentials() {
 
   s.succeed('Credentials OK');
   return { token, accountId };
-}
-
-async function tryWranglerToken() {
-  try {
-    const configPath = join(homedir(), '.wrangler', 'config', 'default.toml');
-    const content = await readFile(configPath, 'utf-8');
-    const match = content.match(/^oauth_token\s*=\s*"(.+)"/m);
-    if (match?.[1]) {
-      // Check if token is expired
-      const expMatch = content.match(/^expiration_time\s*=\s*"(.+)"/m);
-      if (expMatch?.[1] && new Date(expMatch[1]) < new Date()) {
-        return null; // expired
-      }
-      return match[1];
-    }
-  } catch {
-    // config file not found — wrangler not logged in
-  }
-  return null;
 }
 
 async function fetchAccountId(token) {

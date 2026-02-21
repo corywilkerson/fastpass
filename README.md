@@ -60,12 +60,9 @@ Options:
 
 ## Credentials
 
-fastpass needs Cloudflare API access. It checks, in order:
+fastpass needs a Cloudflare API token via the `CLOUDFLARE_API_TOKEN` environment variable.
 
-1. `CLOUDFLARE_API_TOKEN` environment variable
-2. Wrangler OAuth token from `~/.wrangler/config/default.toml` (from `npx wrangler login`)
-
-**Recommended:** Use an API token with:
+Create an API token with:
 
 - **Access: Organizations, Identity Providers, and Groups** — Edit
 - **Access: Apps and Policies** — Edit
@@ -79,8 +76,6 @@ export CLOUDFLARE_API_TOKEN="your-token"
 # Optional, if you have multiple accounts:
 export CLOUDFLARE_ACCOUNT_ID="your-account-id"
 ```
-
-**Note:** Wrangler’s OAuth token typically does not include Access scopes. If `wrangler login` works for Workers but fastpass fails with permission errors, use a dedicated API token with the permissions above.
 
 **Logs:** The `logs` and `status` commands fetch access events. If they fail, your token may need **Access: Audit Logs** — Read.
 
