@@ -4,7 +4,9 @@ import {
   buildIncludeRules,
   resolveAccess,
   validateDomain,
+  checkExistingApp,
 } from '../../src/commands/protect.js';
+import { ApiError } from '../../src/api.js';
 import { createMockApi } from '../helpers/mock-api.js';
 import { cfOk, zones, idps, apps } from '../helpers/fixtures.js';
 import { mockProcessExit, suppressConsole } from '../helpers/test-utils.js';
@@ -234,5 +236,108 @@ describe('protect() full flow', () => {
     expect(api.post).toHaveBeenCalledWith('/access/apps', expect.objectContaining({
       auto_redirect_to_identity: false,
     }));
+  });
+
+  it('returns early with friendly message when domain is already protected', async () => {
+    const api = createMockApi();
+    api.get.mockImplementation((path) => {
+      if (path.startsWith('/zones')) return Promise.resolve(cfOk(zones));
+      if (path === '/access/apps') return Promise.resolve(cfOk(apps));
+      return Promise.resolve(cfOk([]));
+    });
+
+    const result = await protect(api, { domain: 'app.example.com' });
+
+    expect(result).toBeUndefined();
+    expect(api.post).not.toHaveBeenCalled();
+
+    const output = consoleSpy.log.mock.calls.map((c) => c[0]).join('\n');
+    expect(output).toContain('already protected');
+    expect(output).toContain('fastpass inspect');
+    expect(output).toContain('fastpass remove');
+  });
+
+  it('handles application_already_exists race condition on POST', async () => {
+    const api = createMockApi();
+    api.get.mockImplementation((path) => {
+      if (path.startsWith('/zones')) return Promise.resolve(cfOk(zones));
+      if (path === '/access/apps') return Promise.resolve(cfOk([]));
+      if (path.includes('/access/organizations'))
+        return Promise.resolve(cfOk({ auth_domain: 'myteam.cloudflareaccess.com' }));
+      if (path.includes('/access/identity_providers'))
+        return Promise.resolve(cfOk(idps));
+      return Promise.resolve(cfOk([]));
+    });
+
+    api.post.mockRejectedValue(
+      new ApiError('access.api.error.application_already_exists', [{ message: 'access.api.error.application_already_exists' }], 400),
+    );
+
+    const result = await protect(api, {
+      domain: 'new.example.com',
+      auth: 'email',
+      allow: '*@example.com',
+    });
+
+    expect(result).toBeUndefined();
+
+    const output = consoleSpy.log.mock.calls.map((c) => c[0]).join('\n');
+    expect(output).toContain('already protected');
+    expect(output).toContain('fastpass inspect');
+    expect(output).toContain('fastpass remove');
+  });
+
+  it('shows confirmation in interactive mode (not all flags)', async () => {
+    const { confirm, select } = await import('@inquirer/prompts');
+    select.mockResolvedValue('everyone');
+    confirm.mockResolvedValue(true);
+
+    const api = createMockApi();
+    api.get.mockImplementation((path) => {
+      if (path.startsWith('/zones')) return Promise.resolve(cfOk(zones));
+      if (path.includes('/access/organizations'))
+        return Promise.resolve(cfOk({ auth_domain: 'myteam.cloudflareaccess.com' }));
+      if (path.includes('/access/identity_providers'))
+        return Promise.resolve(cfOk(idps));
+      return Promise.resolve(cfOk([]));
+    });
+
+    api.post.mockResolvedValue(cfOk({ id: 'app-new', domain: 'app.example.com' }));
+
+    await protect(api, {
+      domain: 'app.example.com',
+      auth: 'email',
+      // no --allow flag → interactive → confirmation shown
+    });
+
+    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({
+      message: 'Create this Access application?',
+    }));
+  });
+
+  it('skips confirmation when all CLI flags provided', async () => {
+    const { confirm } = await import('@inquirer/prompts');
+    confirm.mockClear();
+
+    const api = createMockApi();
+    api.get.mockImplementation((path) => {
+      if (path.startsWith('/zones')) return Promise.resolve(cfOk(zones));
+      if (path.includes('/access/organizations'))
+        return Promise.resolve(cfOk({ auth_domain: 'myteam.cloudflareaccess.com' }));
+      if (path.includes('/access/identity_providers'))
+        return Promise.resolve(cfOk(idps));
+      return Promise.resolve(cfOk([]));
+    });
+
+    api.post.mockResolvedValue(cfOk({ id: 'app-new', domain: 'app.example.com' }));
+
+    await protect(api, {
+      domain: 'app.example.com',
+      auth: 'email',
+      allow: '*@example.com',
+    });
+
+    expect(confirm).not.toHaveBeenCalled();
+    expect(api.post).toHaveBeenCalled();
   });
 });

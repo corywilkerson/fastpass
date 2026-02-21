@@ -35,6 +35,7 @@ export async function getCredentials() {
   }
 
   s.succeed('Credentials OK');
+  console.log('');
   return { token, accountId };
 }
 

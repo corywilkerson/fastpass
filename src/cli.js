@@ -1,6 +1,10 @@
+import { createRequire } from 'node:module';
 import { Command } from 'commander';
 import pc from 'picocolors';
 import { getCredentials } from './auth.js';
+
+const require = createRequire(import.meta.url);
+const { version } = require('../package.json');
 import { createApi } from './api.js';
 import { protect } from './commands/protect.js';
 import { list } from './commands/list.js';
@@ -15,7 +19,7 @@ export function run() {
   program
     .name('fastpass-cli')
     .description('Cloudflare Access in 60 seconds.')
-    .version('0.2.1');
+    .version(version);
 
   // Default action (no subcommand) — run the protect wizard
   program

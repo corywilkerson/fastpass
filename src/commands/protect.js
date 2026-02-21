@@ -1,10 +1,10 @@
 import pc from 'picocolors';
-import { input, select } from '@inquirer/prompts';
+import { input, select, confirm } from '@inquirer/prompts';
 import { getTeamName } from '../auth.js';
 import { ensureEmailOtp } from '../idp/email-otp.js';
 import { ensureGitHub } from '../idp/github.js';
 import { ensureGoogle } from '../idp/google.js';
-import { handleApiError } from '../api.js';
+import { handleApiError, ApiError } from '../api.js';
 import { spin, withSpinner } from '../ui.js';
 
 const AUTH_CHOICES = {
@@ -33,6 +33,16 @@ export async function protect(api, opts = {}) {
 
     // Validate domain exists in CF
     await withSpinner('Verifying domain...', () => validateDomain(api, domain.trim()));
+    console.log('');
+
+    // Check if domain is already protected
+    const existing = await checkExistingApp(api, domain.trim());
+    if (existing) {
+      console.log(`\n  ${pc.yellow('This domain is already protected by Access.')}\n`);
+      console.log(`  Run ${pc.cyan(`fastpass inspect ${domain.trim()}`)} to view its configuration.`);
+      console.log(`  Run ${pc.cyan(`fastpass remove ${domain.trim()}`)} to remove it first.\n`);
+      return;
+    }
 
     // Parse auth methods: comma-separated string from CLI, or single interactive choice
     const authMethods = opts.auth
@@ -48,9 +58,11 @@ export async function protect(api, opts = {}) {
         process.exit(1);
       }
     }
+    console.log('');
 
     // Resolve who gets access
     const { include, includeType } = await resolveAccess(opts.allow);
+    console.log('');
 
     // Get team name for OAuth callback URLs
     const teamName = await withSpinner('Fetching team info', () => getTeamName(api));
@@ -70,6 +82,28 @@ export async function protect(api, opts = {}) {
 
     // Build the policy include rules
     const policyInclude = buildIncludeRules(include, includeType);
+
+    // Describe access for the summary
+    const accessLabel = describeAccess(include, includeType);
+
+    // Show confirmation summary (skip when all CLI flags provided)
+    const allFlagsProvided = opts.domain && opts.auth && opts.allow;
+    if (!allFlagsProvided) {
+      console.log(`  ${pc.bold('Domain:')}  ${domain.trim()}`);
+      console.log(`  ${pc.bold('Login:')}   ${authMethods.map((m) => AUTH_CHOICES[m].label.split(' (')[0]).join(', ')}`);
+      console.log(`  ${pc.bold('Access:')}  ${accessLabel}`);
+      console.log('');
+
+      const ok = await confirm({
+        message: 'Create this Access application?',
+        default: true,
+      });
+
+      if (!ok) {
+        console.log(pc.dim('  Cancelled.\n'));
+        return;
+      }
+    }
 
     // Create the access application with an inline policy
     const s = spin(`Creating Access application for ${pc.bold(domain.trim())}...`);
@@ -91,7 +125,20 @@ export async function protect(api, opts = {}) {
       ],
     };
 
-    const { result: app } = await api.post('/access/apps', appBody);
+    let app;
+    try {
+      const { result } = await api.post('/access/apps', appBody);
+      app = result;
+    } catch (err) {
+      s.fail(`Failed to create Access application for ${pc.bold(domain.trim())}`);
+      if (err instanceof ApiError && err.message.includes('application_already_exists')) {
+        console.log(`\n  ${pc.yellow('This domain is already protected by Access.')}\n`);
+        console.log(`  Run ${pc.cyan(`fastpass inspect ${domain.trim()}`)} to view its configuration.`);
+        console.log(`  Run ${pc.cyan(`fastpass remove ${domain.trim()}`)} to remove it first.\n`);
+        return;
+      }
+      throw err;
+    }
 
     s.succeed(`Protected ${pc.bold(domain.trim())}`);
     console.log('');
@@ -179,6 +226,36 @@ export async function resolveAccess(allowFlag) {
       return { include: [], includeType: 'everyone' };
     default:
       return { include: [], includeType: 'everyone' };
+  }
+}
+
+export async function checkExistingApp(api, domain) {
+  const s = spin('Checking for existing application...');
+  try {
+    const { result } = await api.get('/access/apps');
+    const match = result?.find(
+      (app) => app.type === 'self_hosted' && app.domain === domain,
+    );
+    s.stop();
+    return match || null;
+  } catch {
+    s.stop();
+    return null;
+  }
+}
+
+function describeAccess(include, includeType) {
+  switch (includeType) {
+    case 'emails':
+      return include.join(', ');
+    case 'domain':
+      return `*@${include[0]}`;
+    case 'github_org':
+      return `GitHub org: ${include[0]}`;
+    case 'everyone':
+      return 'Everyone (any logged-in user)';
+    default:
+      return 'Everyone';
   }
 }
 

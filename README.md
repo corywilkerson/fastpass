@@ -1,6 +1,6 @@
 # fastpass
 
-A CLI for rapdily configuring [Cloudflare Access](https://www.cloudflare.com/products/zero-trust/access/) — add authentication to internal apps without touching your application code. Creates Access Applications, Identity Providers, and policies via the Cloudflare API.
+A CLI for rapidly configuring [Cloudflare Access](https://www.cloudflare.com/products/zero-trust/access/) — add authentication to internal apps without touching your application code. Creates Access Applications, Identity Providers, and policies via the Cloudflare API.
 
 **Requirements:** Node 18+, Cloudflare account with the domain on your account, Cloudflare Zero Trust (Access) enabled.
 
