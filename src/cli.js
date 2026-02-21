@@ -15,7 +15,7 @@ export function run() {
   program
     .name('fastpass-cli')
     .description('Cloudflare Access in 60 seconds.')
-    .version('0.2.0');
+    .version('0.2.1');
 
   // Default action (no subcommand) — run the protect wizard
   program
