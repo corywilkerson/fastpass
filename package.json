@@ -8,8 +8,7 @@
   },
   "files": [
     "bin/",
-    "src/",
-    "skill/"
+    "src/"
   ],
   "keywords": [
     "cloudflare",
