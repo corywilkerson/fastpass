@@ -1,16 +1,20 @@
 import pc from 'picocolors';
 import { select } from '@inquirer/prompts';
 import { handleApiError } from '../api.js';
+import { withSpinner, heading } from '../ui.js';
 
 /**
  * Inspect a specific Access application's detailed configuration.
  */
 export async function inspect(api, opts = {}) {
   try {
-    const [{ result: apps }, { result: idps }] = await Promise.all([
-      api.get('/access/apps'),
-      api.get('/access/identity_providers'),
-    ]);
+    const [{ result: apps }, { result: idps }] = await withSpinner(
+      'Loading application details',
+      () => Promise.all([
+        api.get('/access/apps'),
+        api.get('/access/identity_providers'),
+      ]),
+    );
 
     const selfHosted = apps?.filter((a) => a.type === 'self_hosted') || [];
 
@@ -44,16 +48,14 @@ export async function inspect(api, opts = {}) {
     }
 
     // --- App details ---
-    console.log(`\n  ${pc.bold('Application')}`);
-    console.log(pc.dim(`  ${'─'.repeat(50)}`));
+    heading('Application');
     console.log(`  Domain:           ${target.domain || 'n/a'}`);
     console.log(`  Type:             ${target.type || 'n/a'}`);
     console.log(`  Session duration: ${target.session_duration || 'default'}`);
     console.log(`  App ID:           ${pc.dim(target.id)}`);
 
     // --- Allowed IdPs ---
-    console.log(`\n  ${pc.bold('Identity Providers')}`);
-    console.log(pc.dim(`  ${'─'.repeat(50)}`));
+    heading('Identity Providers');
     if (target.allowed_idps?.length) {
       for (const idpId of target.allowed_idps) {
         const idp = idpMap.get(idpId);
@@ -68,8 +70,7 @@ export async function inspect(api, opts = {}) {
     }
 
     // --- Policies ---
-    console.log(`\n  ${pc.bold('Policies')}`);
-    console.log(pc.dim(`  ${'─'.repeat(50)}`));
+    heading('Policies');
     if (target.policies?.length) {
       for (const policy of target.policies) {
         console.log(`  ${pc.cyan(policy.name || 'Unnamed')} — ${policy.decision || 'n/a'}`);

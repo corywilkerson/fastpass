@@ -1,19 +1,24 @@
 import pc from 'picocolors';
 import { input, confirm } from '@inquirer/prompts';
 import open from 'open';
+import { spin } from '../ui.js';
 
 /**
  * Ensure a Google OAuth identity provider exists.
  * Guides the user through creating a Google OAuth client if needed.
  */
 export async function ensureGoogle(api, teamName) {
+  const s = spin('Checking for Google login');
+
   const { result } = await api.get('/access/identity_providers');
   const existing = result?.find((idp) => idp.type === 'google');
 
   if (existing) {
-    console.log(pc.green('  Google login already configured.'));
+    s.succeed('Google login already configured');
     return existing;
   }
+
+  s.stop();
 
   const callbackUrl = `https://${teamName}.cloudflareaccess.com/cdn-cgi/access/callback`;
 
@@ -47,7 +52,7 @@ export async function ensureGoogle(api, teamName) {
     validate: (v) => v.trim().length > 0 || 'Required',
   });
 
-  console.log('  Creating Google identity provider...');
+  const s2 = spin('Creating Google identity provider...');
   const { result: created } = await api.post('/access/identity_providers', {
     type: 'google',
     name: 'Google',
@@ -57,6 +62,6 @@ export async function ensureGoogle(api, teamName) {
     },
   });
 
-  console.log(pc.green('  Google login enabled.'));
+  s2.succeed('Google login enabled');
   return created;
 }

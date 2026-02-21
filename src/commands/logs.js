@@ -1,5 +1,6 @@
 import pc from 'picocolors';
 import { handleApiError } from '../api.js';
+import { withSpinner } from '../ui.js';
 
 /**
  * Show recent access log events, optionally filtered by domain.
@@ -20,8 +21,9 @@ export async function logs(api, opts = {}) {
       sinceParam = `&since=${parsed.toISOString()}`;
     }
 
-    const { result } = await api.get(
-      `/access/logs/access_requests?limit=${limit}&direction=desc${sinceParam}`,
+    const { result } = await withSpinner(
+      'Fetching access events',
+      () => api.get(`/access/logs/access_requests?limit=${limit}&direction=desc${sinceParam}`),
     );
 
     if (!result?.length) {

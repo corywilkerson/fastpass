@@ -1,12 +1,16 @@
 import pc from 'picocolors';
 import { handleApiError } from '../api.js';
+import { withSpinner } from '../ui.js';
 
 /**
  * List all Access applications in the account.
  */
 export async function list(api) {
   try {
-    const { result } = await api.get('/access/apps');
+    const { result } = await withSpinner(
+      'Fetching protected domains',
+      () => api.get('/access/apps'),
+    );
 
     if (!result?.length) {
       console.log(pc.dim('\n  No Access applications found.\n'));

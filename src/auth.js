@@ -1,57 +1,77 @@
-import { execSync } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import pc from 'picocolors';
+import { spin } from './ui.js';
 
 /**
  * Resolve Cloudflare credentials.
  *
  * Priority:
  *  1. CLOUDFLARE_API_TOKEN env var
- *  2. `wrangler auth token` fallback (OAuth token)
+ *  2. Wrangler OAuth token from ~/.wrangler/config/default.toml
  *
  * Account ID:
  *  1. CLOUDFLARE_ACCOUNT_ID env var
  *  2. Fetched from /accounts API
  */
 export async function getCredentials() {
+  const s = spin('Checking Cloudflare credentials');
+
   let token = process.env.CLOUDFLARE_API_TOKEN;
 
   if (!token) {
-    token = tryWranglerToken();
+    s.text = 'Checking Cloudflare credentials (trying wrangler)';
+    token = await tryWranglerToken();
   }
 
   if (!token) {
-    console.error(pc.red('\nCould not find Cloudflare credentials.\n'));
-    console.error('Set one of the following:\n');
-    console.error(`  ${pc.bold('CLOUDFLARE_API_TOKEN')}  — API token (recommended)`);
-    console.error(`                         Create one at https://dash.cloudflare.com/profile/api-tokens`);
-    console.error(`                         Needs ${pc.cyan('Access: Organizations, Identity Providers, and Groups — Edit')}`);
-    console.error(`                         and   ${pc.cyan('Access: Apps and Policies — Edit')}\n`);
-    console.error(`  Or install ${pc.bold('wrangler')} and run ${pc.cyan('npx wrangler login')} first.\n`);
+    s.fail('No Cloudflare credentials found');
+    console.error('');
+    console.error(`  ${pc.bold('How to fix — pick one:')}`);
+    console.error('');
+    console.error(`  ${pc.cyan('1.')} Set an API token (recommended):`);
+    console.error('');
+    console.error(`     ${pc.bold('export CLOUDFLARE_API_TOKEN=<your-token>')}`);
+    console.error('');
+    console.error(`     Create one at: ${pc.dim('https://dash.cloudflare.com/profile/api-tokens')}`);
+    console.error('     Required permissions:');
+    console.error(`       ${pc.dim('•')} Access: Organizations, Identity Providers, and Groups — Edit`);
+    console.error(`       ${pc.dim('•')} Access: Apps and Policies — Edit`);
+    console.error('');
+    console.error(`  ${pc.cyan('2.')} Log in with wrangler:`);
+    console.error('');
+    console.error(`     ${pc.bold('npx wrangler login')}`);
+    console.error('');
     process.exit(1);
   }
 
   let accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
 
   if (!accountId) {
+    s.text = 'Fetching account info';
     accountId = await fetchAccountId(token);
   }
 
+  s.succeed('Credentials OK');
   return { token, accountId };
 }
 
-function tryWranglerToken() {
+async function tryWranglerToken() {
   try {
-    const result = execSync('npx wrangler --version 2>/dev/null && npx wrangler auth token 2>/dev/null', {
-      encoding: 'utf-8',
-      timeout: 15000,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-    const trimmed = result.trim();
-    if (trimmed && !trimmed.includes('Error') && !trimmed.includes('error')) {
-      return trimmed;
+    const configPath = join(homedir(), '.wrangler', 'config', 'default.toml');
+    const content = await readFile(configPath, 'utf-8');
+    const match = content.match(/^oauth_token\s*=\s*"(.+)"/m);
+    if (match?.[1]) {
+      // Check if token is expired
+      const expMatch = content.match(/^expiration_time\s*=\s*"(.+)"/m);
+      if (expMatch?.[1] && new Date(expMatch[1]) < new Date()) {
+        return null; // expired
+      }
+      return match[1];
     }
   } catch {
-    // wrangler not available or not logged in
+    // config file not found — wrangler not logged in
   }
   return null;
 }

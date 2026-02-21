@@ -1,14 +1,17 @@
 import pc from 'picocolors';
 import { select, confirm } from '@inquirer/prompts';
 import { handleApiError } from '../api.js';
+import { spin, withSpinner } from '../ui.js';
 
 /**
  * Remove Access protection from a domain.
  */
 export async function remove(api, opts = {}) {
   try {
+    const s = spin('Fetching applications...');
     const { result } = await api.get('/access/apps');
     const apps = result?.filter((app) => app.type === 'self_hosted') || [];
+    s.stop();
 
     if (!apps.length) {
       console.log(pc.dim('\n  No Access applications to remove.\n'));
@@ -44,9 +47,9 @@ export async function remove(api, opts = {}) {
       return;
     }
 
-    console.log(`  Removing ${pc.bold(target.domain || target.name)}...`);
-    await api.delete(`/access/apps/${target.id}`);
-    console.log(pc.green('  Removed.\n'));
+    const label = target.domain || target.name;
+    await withSpinner(`Removing ${label}`, () => api.delete(`/access/apps/${target.id}`));
+    console.log('');
   } catch (err) {
     handleApiError(err);
   }

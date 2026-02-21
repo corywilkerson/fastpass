@@ -5,6 +5,7 @@ import { ensureEmailOtp } from '../idp/email-otp.js';
 import { ensureGitHub } from '../idp/github.js';
 import { ensureGoogle } from '../idp/google.js';
 import { handleApiError } from '../api.js';
+import { spin, withSpinner } from '../ui.js';
 
 const AUTH_CHOICES = {
   email: { label: 'Email code (easiest, no setup)', setup: ensureEmailOtp },
@@ -31,7 +32,7 @@ export async function protect(api, opts = {}) {
     });
 
     // Validate domain exists in CF
-    await validateDomain(api, domain.trim());
+    await withSpinner('Verifying domain...', () => validateDomain(api, domain.trim()));
 
     const authMethod = opts.auth || await select({
       message: 'How should people log in?',
@@ -47,7 +48,7 @@ export async function protect(api, opts = {}) {
     const { include, includeType } = await resolveAccess(opts.allow);
 
     // Get team name for OAuth callback URLs
-    const teamName = await getTeamName(api);
+    const teamName = await withSpinner('Fetching team info', () => getTeamName(api));
     if (!teamName && authMethod !== 'email') {
       console.error(pc.red('Could not determine your Access team name.'));
       console.error('Make sure Access is enabled in your Cloudflare dashboard.\n');
@@ -62,7 +63,7 @@ export async function protect(api, opts = {}) {
     const policyInclude = buildIncludeRules(include, includeType);
 
     // Create the access application with an inline policy
-    console.log(`  Protecting ${pc.bold(domain.trim())}...`);
+    const s = spin(`Creating Access application for ${pc.bold(domain.trim())}...`);
 
     const appBody = {
       name: domain.trim(),
@@ -83,7 +84,8 @@ export async function protect(api, opts = {}) {
 
     const { result: app } = await api.post('/access/apps', appBody);
 
-    console.log(pc.green('  Done!\n'));
+    s.succeed(`Protected ${pc.bold(domain.trim())}`);
+    console.log('');
     console.log(`  ${pc.bold('Your app is protected!')} Try visiting:`);
     console.log(`  ${pc.cyan(`https://${domain.trim()}`)}\n`);
     console.log(`  Manage it: ${pc.dim('https://one.dash.cloudflare.com')}`);

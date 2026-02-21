@@ -1,19 +1,24 @@
 import pc from 'picocolors';
 import { input, confirm } from '@inquirer/prompts';
 import open from 'open';
+import { spin } from '../ui.js';
 
 /**
  * Ensure a GitHub OAuth identity provider exists.
  * Guides the user through creating a GitHub OAuth app if needed.
  */
 export async function ensureGitHub(api, teamName) {
+  const s = spin('Checking for GitHub login');
+
   const { result } = await api.get('/access/identity_providers');
   const existing = result?.find((idp) => idp.type === 'github');
 
   if (existing) {
-    console.log(pc.green('  GitHub login already configured.'));
+    s.succeed('GitHub login already configured');
     return existing;
   }
+
+  s.stop();
 
   const callbackUrl = `https://${teamName}.cloudflareaccess.com/cdn-cgi/access/callback`;
   const homepageUrl = `https://${teamName}.cloudflareaccess.com`;
@@ -49,7 +54,7 @@ export async function ensureGitHub(api, teamName) {
     validate: (v) => v.trim().length > 0 || 'Required',
   });
 
-  console.log('  Creating GitHub identity provider...');
+  const s2 = spin('Creating GitHub identity provider...');
   const { result: created } = await api.post('/access/identity_providers', {
     type: 'github',
     name: 'GitHub',
@@ -59,6 +64,6 @@ export async function ensureGitHub(api, teamName) {
     },
   });
 
-  console.log(pc.green('  GitHub login enabled.'));
+  s2.succeed('GitHub login enabled');
   return created;
 }
